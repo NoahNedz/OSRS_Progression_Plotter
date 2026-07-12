@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OSRS Progression Timeline - Fields Example</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --panel: #171b22;
+      --line: #2f3847;
+      --text: #e8edf5;
+      --muted: #91a0b8;
+      --accent: #7dd3fc;
+      --skill: #60a5fa;
+      --quest: #f59e0b;
+      --item: #34d399;
+      --diary: #f472b6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #0f1115 0%, #121826 100%);
+      color: var(--text);
+    }
+
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .sub {
+      color: var(--muted);
+      margin: 0 0 28px;
+    }
+
+    .note {
+      margin: 0 0 18px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(145, 160, 184, 0.24);
+      background: rgba(23, 27, 34, 0.75);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 30px;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: 4px;
+      bottom: 4px;
+      width: 2px;
+      background: linear-gradient(180deg, var(--accent), transparent);
+    }
+
+    .entry {
+      position: relative;
+      margin: 0 0 18px;
+      padding: 16px 16px 16px 18px;
+      background: rgba(23, 27, 34, 0.92);
+      border: 1px solid rgba(145, 160, 184, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .entry::before {
+      content: "";
+      position: absolute;
+      left: -24px;
+      top: 22px;
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.15);
+    }
+
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .item { background: rgba(52, 211, 153, 0.14); color: var(--item); }
+    .quest { background: rgba(245, 158, 11, 0.14); color: var(--quest); }
+    .skill { background: rgba(96, 165, 250, 0.14); color: var(--skill); }
+    .diary { background: rgba(244, 114, 182, 0.14); color: var(--diary); }
+
+    .name {
+      margin: 0 0 4px;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .detail {
+      margin: 0;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Progression Timeline</h1>
+    <p class="sub">Profile: Noah Iron (field-demo)</p>
+    <p class="note">This sample demonstrates all export fields per entry: type, source, obtained timestamp, name, and detail.</p>
+
+    <section class="timeline">
+      <article class="entry">
+        <div class="meta">
+          <span class="badge skill">skill</span>
+          <span>Skill tracker</span>
+          <span>2026-07-12 09:04:13 EDT</span>
+        </div>
+        <p class="name">Agility</p>
+        <p class="detail">Reached level 70</p>
+      </article>
+
+      <article class="entry">
+        <div class="meta">
+          <span class="badge quest">quest</span>
+          <span>Quest log</span>
+          <span>2026-07-12 10:03:55 EDT</span>
+        </div>
+        <p class="name">Recipe for Disaster</p>
+        <p class="detail">Quest completed</p>
+      </article>
+
+      <article class="entry">
+        <div class="meta">
+          <span class="badge item">item</span>
+          <span>Equipment</span>
+          <span>2026-07-12 11:15:28 EDT</span>
+        </div>
+        <p class="name">Dragon defender</p>
+        <p class="detail">Equipment unlock found in equipment</p>
+      </article>
+
+      <article class="entry">
+        <div class="meta">
+          <span class="badge item">item</span>
+          <span>Quest</span>
+          <span>2026-07-12 11:33:02 EDT</span>
+        </div>
+        <p class="name">Ava&#39;s assembler</p>
+        <p class="detail">Quest unlock found in inventory</p>
+      </article>
+
+      <article class="entry">
+        <div class="meta">
+          <span class="badge diary">diary</span>
+          <span>Achievement Diary</span>
+          <span>2026-07-12 12:08:44 EDT</span>
+        </div>
+        <p class="name">Karamja Diary (Hard)</p>
+        <p class="detail">Karamja Hard diary completed</p>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
