@@ -15,23 +15,24 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.ItemComposition;
-import net.runelite.api.InventoryID;
 import net.runelite.api.Player;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
 import net.runelite.api.Skill;
-import net.runelite.api.Varbits;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.ChatMessageType;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
@@ -50,15 +51,16 @@ import net.runelite.client.util.ImageUtil;
 	description = "Track curated account progression and export a vertical HTML timeline",
 	tags = {"progression", "timeline", "export", "items", "quests", "skills"}
 )
-@Slf4j
 public class ProgressionTrackerPlugin extends Plugin
 {
-	private static final int INVENTORY_CONTAINER_ID = InventoryID.INVENTORY.getId();
-	private static final int EQUIPMENT_CONTAINER_ID = InventoryID.EQUIPMENT.getId();
-	private static final int BANK_CONTAINER_ID = InventoryID.BANK.getId();
-	private static final int SEED_VAULT_CONTAINER_ID = InventoryID.SEED_VAULT.getId();
-	private static final int GROUP_STORAGE_CONTAINER_ID = InventoryID.GROUP_STORAGE.getId();
-	private static final int GROUP_STORAGE_INV_CONTAINER_ID = InventoryID.GROUP_STORAGE_INV.getId();
+	private static final Logger log = LoggerFactory.getLogger(ProgressionTrackerPlugin.class);
+
+	private static final int INVENTORY_CONTAINER_ID = InventoryID.INV;
+	private static final int EQUIPMENT_CONTAINER_ID = InventoryID.WORN;
+	private static final int BANK_CONTAINER_ID = InventoryID.BANK;
+	private static final int SEED_VAULT_CONTAINER_ID = InventoryID.SEED_VAULT;
+	private static final int GROUP_STORAGE_CONTAINER_ID = InventoryID.INV_GROUP_TEMP;
+	private static final int GROUP_STORAGE_INV_CONTAINER_ID = InventoryID.INV_PLAYER_TEMP;
 
 	private static final Set<Integer> TRACKED_CONTAINER_IDS = Set.of(
 		INVENTORY_CONTAINER_ID,
@@ -70,54 +72,54 @@ public class ProgressionTrackerPlugin extends Plugin
 	);
 
 	private static final List<DiaryMilestone> DIARY_MILESTONES = List.of(
-		new DiaryMilestone("Ardougne", "Easy", Varbits.DIARY_ARDOUGNE_EASY),
-		new DiaryMilestone("Ardougne", "Medium", Varbits.DIARY_ARDOUGNE_MEDIUM),
-		new DiaryMilestone("Ardougne", "Hard", Varbits.DIARY_ARDOUGNE_HARD),
-		new DiaryMilestone("Ardougne", "Elite", Varbits.DIARY_ARDOUGNE_ELITE),
-		new DiaryMilestone("Desert", "Easy", Varbits.DIARY_DESERT_EASY),
-		new DiaryMilestone("Desert", "Medium", Varbits.DIARY_DESERT_MEDIUM),
-		new DiaryMilestone("Desert", "Hard", Varbits.DIARY_DESERT_HARD),
-		new DiaryMilestone("Desert", "Elite", Varbits.DIARY_DESERT_ELITE),
-		new DiaryMilestone("Falador", "Easy", Varbits.DIARY_FALADOR_EASY),
-		new DiaryMilestone("Falador", "Medium", Varbits.DIARY_FALADOR_MEDIUM),
-		new DiaryMilestone("Falador", "Hard", Varbits.DIARY_FALADOR_HARD),
-		new DiaryMilestone("Falador", "Elite", Varbits.DIARY_FALADOR_ELITE),
-		new DiaryMilestone("Fremennik", "Easy", Varbits.DIARY_FREMENNIK_EASY),
-		new DiaryMilestone("Fremennik", "Medium", Varbits.DIARY_FREMENNIK_MEDIUM),
-		new DiaryMilestone("Fremennik", "Hard", Varbits.DIARY_FREMENNIK_HARD),
-		new DiaryMilestone("Fremennik", "Elite", Varbits.DIARY_FREMENNIK_ELITE),
-		new DiaryMilestone("Kandarin", "Easy", Varbits.DIARY_KANDARIN_EASY),
-		new DiaryMilestone("Kandarin", "Medium", Varbits.DIARY_KANDARIN_MEDIUM),
-		new DiaryMilestone("Kandarin", "Hard", Varbits.DIARY_KANDARIN_HARD),
-		new DiaryMilestone("Kandarin", "Elite", Varbits.DIARY_KANDARIN_ELITE),
-		new DiaryMilestone("Karamja", "Easy", Varbits.DIARY_KARAMJA_EASY),
-		new DiaryMilestone("Karamja", "Medium", Varbits.DIARY_KARAMJA_MEDIUM),
-		new DiaryMilestone("Karamja", "Hard", Varbits.DIARY_KARAMJA_HARD),
-		new DiaryMilestone("Karamja", "Elite", Varbits.DIARY_KARAMJA_ELITE),
-		new DiaryMilestone("Kourend & Kebos", "Easy", Varbits.DIARY_KOUREND_EASY),
-		new DiaryMilestone("Kourend & Kebos", "Medium", Varbits.DIARY_KOUREND_MEDIUM),
-		new DiaryMilestone("Kourend & Kebos", "Hard", Varbits.DIARY_KOUREND_HARD),
-		new DiaryMilestone("Kourend & Kebos", "Elite", Varbits.DIARY_KOUREND_ELITE),
-		new DiaryMilestone("Lumbridge & Draynor", "Easy", Varbits.DIARY_LUMBRIDGE_EASY),
-		new DiaryMilestone("Lumbridge & Draynor", "Medium", Varbits.DIARY_LUMBRIDGE_MEDIUM),
-		new DiaryMilestone("Lumbridge & Draynor", "Hard", Varbits.DIARY_LUMBRIDGE_HARD),
-		new DiaryMilestone("Lumbridge & Draynor", "Elite", Varbits.DIARY_LUMBRIDGE_ELITE),
-		new DiaryMilestone("Morytania", "Easy", Varbits.DIARY_MORYTANIA_EASY),
-		new DiaryMilestone("Morytania", "Medium", Varbits.DIARY_MORYTANIA_MEDIUM),
-		new DiaryMilestone("Morytania", "Hard", Varbits.DIARY_MORYTANIA_HARD),
-		new DiaryMilestone("Morytania", "Elite", Varbits.DIARY_MORYTANIA_ELITE),
-		new DiaryMilestone("Varrock", "Easy", Varbits.DIARY_VARROCK_EASY),
-		new DiaryMilestone("Varrock", "Medium", Varbits.DIARY_VARROCK_MEDIUM),
-		new DiaryMilestone("Varrock", "Hard", Varbits.DIARY_VARROCK_HARD),
-		new DiaryMilestone("Varrock", "Elite", Varbits.DIARY_VARROCK_ELITE),
-		new DiaryMilestone("Western Provinces", "Easy", Varbits.DIARY_WESTERN_EASY),
-		new DiaryMilestone("Western Provinces", "Medium", Varbits.DIARY_WESTERN_MEDIUM),
-		new DiaryMilestone("Western Provinces", "Hard", Varbits.DIARY_WESTERN_HARD),
-		new DiaryMilestone("Western Provinces", "Elite", Varbits.DIARY_WESTERN_ELITE),
-		new DiaryMilestone("Wilderness", "Easy", Varbits.DIARY_WILDERNESS_EASY),
-		new DiaryMilestone("Wilderness", "Medium", Varbits.DIARY_WILDERNESS_MEDIUM),
-		new DiaryMilestone("Wilderness", "Hard", Varbits.DIARY_WILDERNESS_HARD),
-		new DiaryMilestone("Wilderness", "Elite", Varbits.DIARY_WILDERNESS_ELITE)
+		new DiaryMilestone("Ardougne", "Easy", VarbitID.ARDOUGNE_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Ardougne", "Medium", VarbitID.ARDOUGNE_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Ardougne", "Hard", VarbitID.ARDOUGNE_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Ardougne", "Elite", VarbitID.ARDOUGNE_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Desert", "Easy", VarbitID.DESERT_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Desert", "Medium", VarbitID.DESERT_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Desert", "Hard", VarbitID.DESERT_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Desert", "Elite", VarbitID.DESERT_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Falador", "Easy", VarbitID.FALADOR_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Falador", "Medium", VarbitID.FALADOR_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Falador", "Hard", VarbitID.FALADOR_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Falador", "Elite", VarbitID.FALADOR_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Fremennik", "Easy", VarbitID.FREMENNIK_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Fremennik", "Medium", VarbitID.FREMENNIK_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Fremennik", "Hard", VarbitID.FREMENNIK_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Fremennik", "Elite", VarbitID.FREMENNIK_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Kandarin", "Easy", VarbitID.KANDARIN_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Kandarin", "Medium", VarbitID.KANDARIN_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Kandarin", "Hard", VarbitID.KANDARIN_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Kandarin", "Elite", VarbitID.KANDARIN_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Karamja", "Easy", VarbitID.ATJUN_EASY_DONE),
+		new DiaryMilestone("Karamja", "Medium", VarbitID.ATJUN_MED_DONE),
+		new DiaryMilestone("Karamja", "Hard", VarbitID.ATJUN_HARD_DONE),
+		new DiaryMilestone("Karamja", "Elite", VarbitID.KARAMJA_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Kourend & Kebos", "Easy", VarbitID.KOUREND_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Kourend & Kebos", "Medium", VarbitID.KOUREND_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Kourend & Kebos", "Hard", VarbitID.KOUREND_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Kourend & Kebos", "Elite", VarbitID.KOUREND_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Lumbridge & Draynor", "Easy", VarbitID.LUMBRIDGE_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Lumbridge & Draynor", "Medium", VarbitID.LUMBRIDGE_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Lumbridge & Draynor", "Hard", VarbitID.LUMBRIDGE_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Lumbridge & Draynor", "Elite", VarbitID.LUMBRIDGE_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Morytania", "Easy", VarbitID.MORYTANIA_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Morytania", "Medium", VarbitID.MORYTANIA_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Morytania", "Hard", VarbitID.MORYTANIA_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Morytania", "Elite", VarbitID.MORYTANIA_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Varrock", "Easy", VarbitID.VARROCK_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Varrock", "Medium", VarbitID.VARROCK_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Varrock", "Hard", VarbitID.VARROCK_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Varrock", "Elite", VarbitID.VARROCK_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Western Provinces", "Easy", VarbitID.WESTERN_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Western Provinces", "Medium", VarbitID.WESTERN_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Western Provinces", "Hard", VarbitID.WESTERN_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Western Provinces", "Elite", VarbitID.WESTERN_DIARY_ELITE_COMPLETE),
+		new DiaryMilestone("Wilderness", "Easy", VarbitID.WILDERNESS_DIARY_EASY_COMPLETE),
+		new DiaryMilestone("Wilderness", "Medium", VarbitID.WILDERNESS_DIARY_MEDIUM_COMPLETE),
+		new DiaryMilestone("Wilderness", "Hard", VarbitID.WILDERNESS_DIARY_HARD_COMPLETE),
+		new DiaryMilestone("Wilderness", "Elite", VarbitID.WILDERNESS_DIARY_ELITE_COMPLETE)
 	);
 
 	@Inject
