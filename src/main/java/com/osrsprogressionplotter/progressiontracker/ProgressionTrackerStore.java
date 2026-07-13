@@ -24,20 +24,16 @@ import net.runelite.client.RuneLite;
 
 final class ProgressionTrackerStore
 {
-	private static final Gson GSON = new GsonBuilder()
-		.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (src, typeOfSrc, context) -> new JsonPrimitive(src.toString()))
-		.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, typeOfT, context) -> Instant.parse(json.getAsString()))
-		.setPrettyPrinting()
-		.create();
 	private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
 
 	private ProgressionTrackerStore()
 	{
 	}
 
-	static ProgressionTrackerJournal load(String profileKey)
+	static ProgressionTrackerJournal load(String profileKey, Gson gson)
 	{
 		ProgressionTrackerJournal journal = new ProgressionTrackerJournal();
+		Gson configuredGson = configuredGson(gson);
 		Path file = storageFile(profileKey).toPath();
 		if (!Files.exists(file))
 		{
@@ -47,7 +43,7 @@ final class ProgressionTrackerStore
 		try
 		{
 			String json = Files.readString(file, StandardCharsets.UTF_8);
-			ProgressionTrackerState state = GSON.fromJson(json, ProgressionTrackerState.class);
+			ProgressionTrackerState state = configuredGson.fromJson(json, ProgressionTrackerState.class);
 			if (state != null && state.entries != null)
 			{
 				journal.load(state.entries);
@@ -61,15 +57,16 @@ final class ProgressionTrackerStore
 		return journal;
 	}
 
-	static void save(String profileKey, ProgressionTrackerJournal journal)
+	static void save(String profileKey, ProgressionTrackerJournal journal, Gson gson)
 	{
 		Path file = storageFile(profileKey).toPath();
+		Gson configuredGson = configuredGson(gson);
 		try
 		{
 			Files.createDirectories(file.getParent());
 			ProgressionTrackerState state = new ProgressionTrackerState();
 			state.entries = journal.getEntries();
-			Files.writeString(file, GSON.toJson(state), StandardCharsets.UTF_8);
+			Files.writeString(file, configuredGson.toJson(state), StandardCharsets.UTF_8);
 		}
 		catch (IOException ex)
 		{
@@ -142,17 +139,19 @@ final class ProgressionTrackerStore
 		return html.toString();
 	}
 
-	static void exportRaw(File file, ProgressionTrackerJournal journal) throws IOException
+	static void exportRaw(File file, ProgressionTrackerJournal journal, Gson gson) throws IOException
 	{
+		Gson configuredGson = configuredGson(gson);
 		ProgressionTrackerState state = new ProgressionTrackerState();
 		state.entries = journal.getEntries();
-		Files.writeString(file.toPath(), GSON.toJson(state), StandardCharsets.UTF_8);
+		Files.writeString(file.toPath(), configuredGson.toJson(state), StandardCharsets.UTF_8);
 	}
 
-	static ProgressionTrackerJournal importRaw(File file) throws IOException
+	static ProgressionTrackerJournal importRaw(File file, Gson gson) throws IOException
 	{
+		Gson configuredGson = configuredGson(gson);
 		String json = Files.readString(file.toPath(), StandardCharsets.UTF_8);
-		ProgressionTrackerState state = GSON.fromJson(json, ProgressionTrackerState.class);
+		ProgressionTrackerState state = configuredGson.fromJson(json, ProgressionTrackerState.class);
 		ProgressionTrackerJournal imported = new ProgressionTrackerJournal();
 		if (state != null && state.entries != null)
 		{
@@ -181,6 +180,15 @@ final class ProgressionTrackerStore
 	{
 		String safeProfileKey = profileKey == null ? "default" : profileKey.replaceAll("[^a-zA-Z0-9._-]", "_");
 		return new File(new File(RuneLite.RUNELITE_DIR, "progression-tracker"), safeProfileKey + ".json");
+	}
+
+	private static Gson configuredGson(Gson gson)
+	{
+		return gson.newBuilder()
+			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (src, typeOfSrc, context) -> new JsonPrimitive(src.toString()))
+			.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, typeOfT, context) -> Instant.parse(json.getAsString()))
+			.setPrettyPrinting()
+			.create();
 	}
 
 	static final class ProgressionTrackerState

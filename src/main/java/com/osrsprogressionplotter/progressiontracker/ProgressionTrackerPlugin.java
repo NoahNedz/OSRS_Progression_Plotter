@@ -5,6 +5,7 @@
 package com.osrsprogressionplotter.progressiontracker;
 
 import com.google.inject.Provides;
+import com.google.gson.Gson;
 import java.awt.Desktop;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -140,6 +141,9 @@ public class ProgressionTrackerPlugin extends Plugin
 	@Inject
 	private ChatMessageManager chatMessageManager;
 
+	@Inject
+	private Gson gson;
+
 	private NavigationButton navButton;
 	private ProgressionTrackerPanel panel;
 	private ProgressionTrackerJournal journal = new ProgressionTrackerJournal();
@@ -274,7 +278,7 @@ public class ProgressionTrackerPlugin extends Plugin
 	{
 		try
 		{
-			ProgressionTrackerStore.exportRaw(file, journal);
+			ProgressionTrackerStore.exportRaw(file, journal, gson);
 			announce("Exported raw progression backup with " + journal.size() + " entries.");
 		}
 		catch (IOException ex)
@@ -299,7 +303,7 @@ public class ProgressionTrackerPlugin extends Plugin
 
 		try
 		{
-			journal = ProgressionTrackerStore.importRaw(file);
+			journal = ProgressionTrackerStore.importRaw(file, gson);
 			dirty = true;
 			refreshPanel();
 			saveIfDirty();
@@ -329,7 +333,7 @@ public class ProgressionTrackerPlugin extends Plugin
 		{
 			saveIfDirty();
 			activeProfileKey = profileKey;
-			journal = ProgressionTrackerStore.load(profileKey);
+			journal = ProgressionTrackerStore.load(profileKey, gson);
 			bootstrapPending = true;
 			dirty = false;
 			refreshPanel();
@@ -496,7 +500,7 @@ public class ProgressionTrackerPlugin extends Plugin
 			return;
 		}
 
-		ProgressionTrackerStore.save(activeProfileKey, journal);
+		ProgressionTrackerStore.save(activeProfileKey, journal, gson);
 		dirty = false;
 	}
 

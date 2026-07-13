@@ -4,6 +4,7 @@
  */
 package com.osrsprogressionplotter.progressiontracker;
 
+import com.google.gson.Gson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
@@ -35,6 +36,7 @@ public class ProgressionTrackerStoreTest
 	@Test
 	public void rawExportImportRoundTripPreservesEntries() throws IOException
 	{
+		Gson gson = new Gson();
 		ProgressionTrackerJournal journal = new ProgressionTrackerJournal();
 		journal.recordItem("item:1", "Graceful hood", "Skilling", Instant.parse("2026-01-01T12:30:00Z"), "Skilling unlock found in bank");
 		journal.recordSkill("skill:AGILITY:70", "Agility", Instant.parse("2026-01-01T12:40:00Z"), "Reached level 70");
@@ -42,8 +44,8 @@ public class ProgressionTrackerStoreTest
 		Path tempFile = Files.createTempFile("progression-raw", ".json");
 		try
 		{
-			ProgressionTrackerStore.exportRaw(tempFile.toFile(), journal);
-			ProgressionTrackerJournal imported = ProgressionTrackerStore.importRaw(tempFile.toFile());
+			ProgressionTrackerStore.exportRaw(tempFile.toFile(), journal, gson);
+			ProgressionTrackerJournal imported = ProgressionTrackerStore.importRaw(tempFile.toFile(), gson);
 
 			assertEquals(2, imported.size());
 			assertEquals("Graceful hood", imported.getEntries().get(0).getName());
