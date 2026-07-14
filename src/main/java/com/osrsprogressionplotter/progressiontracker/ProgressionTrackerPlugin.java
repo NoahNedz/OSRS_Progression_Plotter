@@ -19,6 +19,8 @@ import javax.swing.SwingUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import net.runelite.api.Client;
+import net.runelite.api.EnumComposition;
+import net.runelite.api.EnumID;
 import net.runelite.api.GameState;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
@@ -71,6 +73,19 @@ public class ProgressionTrackerPlugin extends Plugin
 		GROUP_STORAGE_CONTAINER_ID,
 		GROUP_STORAGE_INV_CONTAINER_ID
 	);
+
+	private static final int[] POH_COSTUME_ROOM_ENUM_IDS = {
+		EnumID.POH_COSTUME_WARDROBE,
+		EnumID.POH_COSTUME_ARMOUR_CASE,
+		EnumID.POH_CAPE_RACK,
+		EnumID.POH_TOY_BOX,
+		EnumID.POH_COSTUME_CLUE_BEGINNER,
+		EnumID.POH_COSTUME_CLUE_EASY,
+		EnumID.POH_COSTUME_CLUE_MEDIUM,
+		EnumID.POH_COSTUME_CLUE_HARD,
+		EnumID.POH_COSTUME_CLUE_ELITE,
+		EnumID.POH_COSTUME_CLUE_MASTER
+	};
 
 	private static final List<DiaryMilestone> DIARY_MILESTONES = List.of(
 		new DiaryMilestone("Ardougne", "Easy", VarbitID.ARDOUGNE_DIARY_EASY_COMPLETE),
@@ -344,6 +359,7 @@ public class ProgressionTrackerPlugin extends Plugin
 	{
 		int before = journal.size();
 		captureQuests();
+		capturePohCostumes();
 		captureDiaries();
 		captureSkills();
 		captureItems();
@@ -437,6 +453,94 @@ public class ProgressionTrackerPlugin extends Plugin
 		}
 
 		refreshPanel();
+	}
+
+	private void capturePohCostumes()
+	{
+		int captured = 0;
+		EnumComposition members = client.getEnum(EnumID.POH_COSTUME_MEMBERS);
+		EnumComposition alternate = client.getEnum(EnumID.POH_COSTUME_ALTERNATE);
+		EnumComposition alternates = client.getEnum(EnumID.POH_COSTUME_ALTERNATES);
+
+		for (int tierEnumId : POH_COSTUME_ROOM_ENUM_IDS)
+		{
+			EnumComposition tierEnum = client.getEnum(tierEnumId);
+			for (int itemId : tierEnum.getIntVals())
+			{
+				captured += capturePohCostumeItem(itemId, members, alternate, alternates);
+			}
+		}
+
+		if (captured > 0)
+		{
+			announce("Tracked " + captured + " POH costume room item" + (captured == 1 ? "" : "s") + ".");
+		}
+	}
+
+	private int capturePohCostumeItem(int itemId, EnumComposition members, EnumComposition alternate, EnumComposition alternates)
+	{
+		int captured = capturePohCostumeVariant(itemId);
+
+		int membersEnumId = members.getIntValue(itemId);
+		if (membersEnumId != -1)
+		{
+			EnumComposition memberEnum = client.getEnum(membersEnumId);
+			for (int memberItemId : memberEnum.getIntVals())
+			{
+				captured += capturePohCostumeVariants(memberItemId, alternate, alternates);
+			}
+			return captured;
+		}
+
+		captured += capturePohCostumeVariants(itemId, alternate, alternates);
+		return captured;
+	}
+
+	private int capturePohCostumeVariants(int itemId, EnumComposition alternate, EnumComposition alternates)
+	{
+		int captured = capturePohCostumeVariant(itemId);
+
+		int alternatesEnumId = alternates.getIntValue(itemId);
+		if (alternatesEnumId != -1)
+		{
+			EnumComposition alternatesEnum = client.getEnum(alternatesEnumId);
+			for (int alternateItemId : alternatesEnum.getIntVals())
+			{
+				captured += capturePohCostumeVariant(alternateItemId);
+			}
+			return captured;
+		}
+
+		int alternateItemId = alternate.getIntValue(itemId);
+		if (alternateItemId != -1)
+		{
+			captured += capturePohCostumeVariant(alternateItemId);
+		}
+
+		return captured;
+	}
+
+	private int capturePohCostumeVariant(int itemId)
+	{
+		if (itemId <= 0)
+		{
+			return 0;
+		}
+
+		ItemComposition itemComposition = itemManager.getItemComposition(itemId);
+		if (itemComposition == null)
+		{
+			return 0;
+		}
+
+		String itemName = itemComposition.getName();
+		if (!ProgressionTrackerCatalog.isTrackedItem(itemName))
+		{
+			return 0;
+		}
+
+		String key = "item:" + itemId;
+		return journal.recordItem(key, itemName, "POH costume room", Instant.now(), "Unlocked in POH costume room") ? 1 : 0;
 	}
 
 	private void captureDiaries()
